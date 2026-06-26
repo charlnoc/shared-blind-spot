@@ -16,7 +16,7 @@ designed to resolve that.
 
 ## Next (in priority order)
 
-### 1. Capability-matched cross-family judge + more N  ·  [open issue](docs/issue-1-cross-family-api-judge.md)
+### 1. Capability-matched cross-family judge + more N  ·  [issue #1](https://github.com/charlnoc/shared-blind-spot/issues/1)
 The current cross-family judge (SmolLM2-1.7B) is a weak arithmetic checker that
 rubber-stamps, so the same-vs-cross contrast is partly confounded by capability,
 not just family. Add an **API cross-family judge** (e.g. a Claude model) that is

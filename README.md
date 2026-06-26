@@ -101,7 +101,7 @@ run_all.sh / run_tests.sh   entry points     |     scratch/   exploratory dev sc
 
 **This is active research, released early on purpose.** The protocol and the locator have certain, present value (a reproducible method; a reusable tool) regardless of whether the headline ever reaches POSITIVE — so they ship now, with their boundaries labelled honestly, rather than waiting on a stronger title.
 
-**I am continuing to develop this.** The next steps are public, not aspirational hand-waving — see [ROADMAP.md](ROADMAP.md) and the open issue [docs/issue-1-cross-family-api-judge.md](docs/issue-1-cross-family-api-judge.md):
+**I am continuing to develop this.** The next steps are public, not aspirational hand-waving — see [ROADMAP.md](ROADMAP.md) and open issue [#1](https://github.com/charlnoc/shared-blind-spot/issues/1):
 1. Harden the cross-family arm with a **capability-matched API judge** (the current cross judge is a weak arithmetic checker), and scale N for statistical power.
 2. Add **non-templated domains** (free-form word problems, unit-conversion chains) where perplexity actually varies, giving the familiarity control real purchase.
 3. Only on a positive, perplexity-robust SER: **representation-level (Layer-3)** confirmation on the open-weight models.
