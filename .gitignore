@@ -32,3 +32,8 @@ results/phase2/runs/_*.jsonl
 # Raw run logs + scratch markers (curated .md deliverables are committed)
 results/phase2/*.log
 results/phase2/.dryrun*
+
+# Local working notes + draft plans (kept private until deliberately published).
+# To make the Phase 3 plan public later, delete its line here.
+*.local.md
+phase3_plan.md
