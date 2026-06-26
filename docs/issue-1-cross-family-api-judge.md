@@ -1,7 +1,12 @@
 # Issue #1 — Harden the cross-family arm with a capability-matched API judge, and scale N
 
-> Ready-to-file issue. Once the repo has a GitHub remote, file it with:
-> `gh issue create --title "Capability-matched cross-family API judge + larger N" --body-file docs/issue-1-cross-family-api-judge.md --label "roadmap,help wanted"`
+> **✅ RESOLVED in v2 (2026-06-26).** Done: gpt-4o-mini answerer, gpt-4o same-family
+> judge, claude-haiku cross-family judge capability-matched to within 3pp on held-out
+> calibration, N=500. **Result: NULL on shared blind spot** — excess(same)=+0.16 vs
+> excess(cross)=+0.26 (gap −0.10, 95% CI [−0.24, +0.04]). Same-family over-endorsement
+> survives (FER 0.38 vs 0.18) but is not error-step-coupled → self-preference, not a shared
+> blind spot. Full write-up: [`results/phase2/RESEARCH_REPORT_v2.md`](../results/phase2/RESEARCH_REPORT_v2.md).
+> The original problem statement is kept below for the record.
 
 ## Problem
 

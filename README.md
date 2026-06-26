@@ -1,81 +1,178 @@
-# Shared Blind Spot vs Self-Preference
+# Shared Blind Spot vs Self-Preference in LLM-as-a-Judge: an error-step-level adjudication
 
-**A method (and a working instrument) for telling apart two reasons an LLM judge wrongly endorses a same-family model's answer: because the answer *looks familiar*, or because the judge *would make the same mistake at the same step*.**
+When a same-family LLM judge wrongly endorses another model's wrong answer, *why*? Two
+mechanisms predict the same endorsement but different internals: a **shared blind spot**
+(the judge's own reasoning fails at the *same step*, so it can't see the mistake) or
+**self-preference / leniency** (the judge is lenient toward familiar same-family output,
+regardless of whether it shares the specific error). This repo is a small, cheap, fully
+reproducible **protocol** that separates the two at the *error-step level*, after
+**capability-matching** the judge arms — and reports the verdict it returns. On a
+controlled, mechanically-verifiable arithmetic domain, the verdict is: **self-preference,
+not a shared blind spot.**
 
-The literature on LLM-as-a-judge has largely pinned same-family favouritism on **familiarity / self-preference** (judges prefer lower-perplexity, more familiar-looking text). This repo isolates a *different* mechanism:
+We are **not** claiming to discover that LLM judges share blind spots. We provide an
+instrument that adjudicates the question and accept the answer it gives — including the
+fact that it overturned our own earlier, weaker signal.
 
-> **Shared blind spot.** A same-family judge misses an answerer's error not because the answer looks familiar, but because the judge's own reasoning fails at the *same step*. It can't see the mistake because it would make the mistake too.
+## What this is / isn't
 
-This is released as a **method/platform**, not a finished claim. The point is a clean, reproducible, criticisable protocol for separating the two mechanisms — plus a reusable tool the protocol is built on. The current result (below) is an honest, deliberately-scoped **SUGGESTIVE**, and the project is **actively continuing** (see [Status](#project-status--commitment) and [ROADMAP](ROADMAP.md)).
+**Is:** a minimal measurement protocol to separate two mechanisms of same-family judge
+favouritism, with a mechanical (never-LLM) error-step locator, a shared-error-rate metric
+against a chance baseline, and a capability-matching calibration step — plus two runs:
+a local open-weight run (v1) and a capability-matched cross-family API run (v2).
 
----
+**Isn't:** a claim that judges sharing failure modes is a new phenomenon (it isn't — see
+related work); a large-scale study; a production tool. Single templated domain, modest
+usable-case counts, one model pair per arm.
 
-## What's actually worth reusing here
+## Background & the precise question
 
-Ranked by reuse value, not by where the headline is:
+LLM-as-a-judge is widely used, and same-family judges over-endorse same-family outputs —
+**self-preference bias**, well established since Zheng et al. (2023, "Judging LLM-as-a-Judge
+with MT-Bench and Chatbot Arena"). The open question here is narrower: *when* a same-family
+judge wrongly endorses, is it because it **shares the answerer's specific reasoning failure**
+(shared blind spot) or because it is **lenient toward familiar output** (self-preference)?
+These differ in a checkable way — in *where the judge errs when it solves the same problem
+itself*. Shared blind spot predicts the judge fails at the answerer's exact step more than a
+matched outside judge does; self-preference predicts no such error-step coupling (the judge
+may even solve it correctly and still endorse the wrong answer).
 
-### 1. A mechanical, model-free error-step locator — `src/error_locator.py`
-The hardest asset, and usable on its own. Given a chain-of-thought, it finds the **first reasoning step that goes wrong**, by **pure re-execution — it never calls an LLM**. That discipline is the whole point: the obvious shortcut (ask an LLM "where's the error?") reintroduces exactly the bias you're trying to study. It is:
-- **exact** when the CoT aligns 1:1 with the canonical steps (re-execute each, flag the first inconsistent one),
-- **insertion/deletion tolerant** via a value-trace fallback in canonical-operation space (weak models add/drop steps),
-- **unit-tested** on **>1,200 synthetically-corrupted CoTs** with known error positions (exact when aligned; >97% for the fallback), with a model-free test gate that runs in `<0.1s` and needs zero dependencies.
+## Related work — and the exact gap
 
-If you do CoT-level error analysis, this is the component you'd otherwise be tempted to do wrong. See [docs/error-step-locator.md](docs/error-step-locator.md).
+Prior work establishes the surrounding facts but stops short of this adjudication (each
+preprint below was checked against its arXiv page):
 
-### 2. The mechanism-separation protocol — SER + chance baseline + perplexity control
-The contribution isn't a number, it's a **procedure others can reproduce, attack, and improve**:
-- **False Endorsement Rate (FER)** = P(judge endorses | answer is wrong). Necessary, *not* sufficient — self-preference predicts the same gap.
-- **Shared-Error Rate (SER)** = among false endorsements, how often the judge's *independent* solution is wrong at the **same canonical step** as the answerer. This is the decisive measurement.
-- **Chance baseline** = Σ_k p_M(k)·p_J(k) from the empirical error-step marginals — the co-location expected under independence.
-- **Perplexity control** = regress the judge's perplexity on the answerer's CoT out of the family effect, so a surviving effect can't be "just familiarity".
+- **Avena, Bet & Busoni, "How reliable are LLMs when it comes to playing dice?"**
+  (arXiv:2606.07515, 2026, preprint). Frontier models fail consistently on a describable
+  class of problems (avg accuracy 0.96 on standard discrete-probability questions vs 0.59 on
+  counterintuitive ones, with token-bias sensitivity). → Structured, shared failure modes
+  are real. **Stops at** final-answer accuracy on a benchmark; it studies models *solving*,
+  not *judging* — the "judges therefore share the blind spot" reading is an extrapolation,
+  not a result in the paper.
+- **Song, Zheng & Xu, "Beyond the Illusion of Consensus: From Surface Heuristics to
+  Knowledge-Grounded Evaluation in LLM-as-a-Judge"** (arXiv:2603.11027, 2026, preprint).
+  High agreement among judges masks weak sample-level agreement — an "Evaluation Illusion" —
+  with judges anchoring on surface heuristics rather than substance. → The strongest
+  articulation of the self-preference / surface alternative. **Stops at** subjective-quality
+  domains without a mechanical correctness check; not error-step level. Our verdict *agrees
+  with and extends* it into a verifiable-reasoning domain.
+- **Yang et al., "Auditing Multi-Agent LLM Reasoning Trees Outperforms Majority Vote and
+  LLM-as-Judge"** (arXiv:2602.09341, 2026, preprint; *AgentAuditor*). Agreement among agents
+  is an unreliable correctness signal, so they audit reasoning trees to route around it. →
+  Treats unreliable shared agreement as a nuisance to mitigate. **Stops at** building a
+  mitigation; it does not *isolate and measure* shared error steps as the object of study.
+- **Schwinn et al., "A Coin Flip for Safety: LLM Judges Fail to Reliably Measure Adversarial
+  Robustness"** (arXiv:2603.06594, 2026, preprint). Under adversarial distribution shift,
+  judge agreement degrades to near random chance against 6,642 human-verified labels. →
+  Reinforces "high agreement ≠ correctness," at the verdict level, not the error-step level.
 
-Self-preference is a crowded field; *cleanly operationalising the split from shared reasoning failure* is the new part. This repo turns that operationalisation into a platform you can stand on.
+**The gap this fills:** no prior work, *after capability-matching the judge arms*, measures
+**error-step co-location** to adjudicate whether same-family favouritism is a shared
+reasoning blind spot or self-preference. That adjudication is this repo's contribution.
 
-### 3. Engineering discipline as a trust signal
-In a field full of repos that don't run, or run but quietly use an LLM as their own error locator (self-contaminating the bias under study), being **obviously honest and obviously reproducible** is itself the signal:
-- each model runs in its **own process** (loading several into one process corrupts Apple's MPS memory pool and hangs — found the hard way),
-- **incremental JSONL** so no run ever loses work and any phase is independently re-runnable,
-- a **model-free test gate** (`./run_tests.sh`, 25 tests) you can run before trusting anything,
-- results reported **honestly**: a coefficient whose CI just touches zero is labelled **SUGGESTIVE**, not dressed up as positive.
+## Method (the instrument)
 
----
+- **Mechanical, never-LLM error-step locator** (`src/error_locator.py`). Given a
+  chain-of-thought, it finds the first step that goes wrong by **pure re-execution** — exact
+  when the CoT aligns 1:1 with the canonical operations, with an insertion/deletion-tolerant
+  value-trace fallback. It never calls an LLM, because an LLM-judged locator would reintroduce
+  the very bias under study. Unit-tested on 1,200+ synthetically-corrupted CoTs (`./run_tests.sh`,
+  25 tests, model-free).
+- **SER** (shared-error rate) = among false endorsements where *both* the answerer and the
+  judge's *independent* solution are wrong+localized, the fraction sharing the **same canonical
+  error step**. **Chance baseline** = Σ_k p_M(k)·p_J(k) from each side's empirical error-step
+  marginals. **Excess co-location** = SER − chance — the decisive per-arm quantity.
+- **Capability matching** (v2): on a held-out set, tune difficulty so the same- and
+  cross-family judges have comparable standalone solve accuracy, so the same-vs-cross contrast
+  isn't a capability difference in disguise.
 
-## Current result (v1, local, honest)
+Full definitions: [`results/RESEARCH_REPORT.md`](results/RESEARCH_REPORT.md) (v1) and
+[`results/phase2/RESEARCH_REPORT_v2.md`](results/phase2/RESEARCH_REPORT_v2.md) (v2).
 
-150 fresh multi-step arithmetic problems. Answerer **M = Qwen2.5-0.5B** (8% accuracy → 138 errorful cases). Judges: **same-family = Qwen2.5-1.5B**, **cross-family = SmolLM2-1.7B**.
+## Results — both runs
 
-| metric | same-family | cross-family |
+**v1 (local, open-weight: Qwen2.5-0.5B answerer, Qwen2.5-1.5B same-judge, SmolLM2-1.7B
+cross-judge; N=150).** SER(same) = 0.37 vs chance 0.22 and SER(cross) = 0.20 — excess
+co-location +0.15 (same) vs +0.08 (cross). **Verdict: SUGGESTIVE** — leaned positive, but the
+perplexity-controlled coefficient's 95% CI just touched zero, *and the cross arm was
+capability-confounded* (Qwen is unusually math-strong for its size, so the size-matched
+non-Qwen judge differed in ability). That confound is exactly why v2 exists.
+
+**v2 (capability-matched, cross-family API: gpt-4o-mini answerer, gpt-4o same-judge,
+claude-haiku cross-judge, matched to within 3pp on held-out calibration; N=500).**
+
+| metric | same-family (gpt-4o) | cross-family (claude-haiku) |
 |---|---|---|
-| False-endorsement rate | 0.53 | 0.98 *(weak judge — rubber-stamps; see report)* |
-| **Shared-error rate (SER)** | **0.37** | 0.20 |
-| chance baseline | 0.22 | 0.12 |
-| **excess co-location (SER − chance)** | **+0.15** | +0.08 |
+| false-endorsement rate (FER) | **0.38** | 0.18 |
+| shared-error rate (SER) | 0.22 | 0.31 |
+| chance baseline | 0.06 | 0.05 |
+| **excess co-location (SER − chance)** | **+0.16** | +0.26 |
+| usable shared-error cases (n) | 138 | 51 |
 
-**Verdict: SUGGESTIVE.** The same-family judge shares the answerer's *specific* error step ~2× above chance vs the cross-family judge; the gap holds within both low- and high-perplexity strata; and same-family perplexity isn't lower than cross-family, so familiarity predicts the *wrong* direction for the gap. What holds it short of POSITIVE is purely power — the pooled perplexity-controlled coefficient is positive but its 95% CI just touches zero (n=38 usable same-family cases).
+**Verdict: NULL on shared blind spot.** The decisive quantity — excess(same) − excess(cross),
+via a problem-level bootstrap — is **gap = −0.10, 95% CI [−0.24, +0.04], with only 8% of
+resamples positive**. Once the arms are capability-matched, same-family excess co-location
+does **not** exceed cross-family; if anything it is lower. The v1 signal does not survive.
+([`excess_gap.png`](results/phase2/excess_gap.png) is the decisive figure.)
 
-Full write-up: **[results/RESEARCH_REPORT.md](results/RESEARCH_REPORT.md)** · figures: [`ser_vs_null.png`](results/ser_vs_null.png), [`fer_by_family_domain.png`](results/fer_by_family_domain.png), [`ser_perplexity_partial.png`](results/ser_perplexity_partial.png).
+**The positive finding inside the NULL.** Same-family over-endorsement *does* survive
+capability matching: FER(same) = 0.38 vs FER(cross) = 0.18 (~2.2×) — and conservatively so,
+since the cross judge was actually the *more* capable solver here (34% vs 24%) yet endorsed
+less. But that favouritism is **not** error-step-coupled (excess is not family-specific), so
+its mechanism is **self-preference / leniency, not a shared blind spot**. The smoking gun: in
+**41 of 180** same-family false endorsements, the judge had solved the problem **correctly
+itself** and still endorsed the wrong answer.
 
----
+## Limitations (read these)
 
-## Run it
+- **The familiarity (perplexity) control was not computable in v2.** Teacher-forced perplexity
+  on a *provided* CoT needs echo logprobs, which neither the gpt-4o-class chat API nor the
+  Claude Messages API exposes. So the v2 decisive statistic is deliberately perplexity-free;
+  on templated arithmetic perplexity barely varied in v1 anyway (≈1.1–1.2, and in the *wrong*
+  direction for a familiarity story). Restoring a real familiarity control is the main open
+  thread.
+- **Realized capability gap.** The in-run judge solve-accuracy gap (~10pp, cross stronger) ran
+  wider than the held-out calibration gap (3pp). Excess subtracts each arm's own chance
+  baseline, which mitigates but does not erase this; it is flagged in the report and could
+  contribute to the cross arm's slightly higher excess.
+- **Scope.** A single templated domain, small open models in v1, one model pair per arm, modest
+  usable-case counts. No Layer-3 representation analysis was attempted — it was gated on a
+  positive v2, which (correctly) was never reached.
+
+## Phase 3 — what would settle the open thread
+
+A free-form / less-templated domain (word problems, multi-hop unit conversions) where
+perplexity genuinely varies, using echo-capable models so the familiarity control returns.
+Clearly a future direction, not a promise. See [ROADMAP.md](ROADMAP.md).
+
+## Reproduce
 
 ```bash
-# 1. The model-free gate — no torch, no downloads, stdlib only. Trust starts here.
+# Model-free gate: generator + mechanical error-step locator (25 tests, stdlib only)
 ./run_tests.sh
 
-# 2. Full local run: one fresh process per model -> incremental JSONL -> assemble
-#    -> figures + findings.md + RESEARCH_REPORT.md. Downloads ~3 small models on
-#    first run. ~1.5h on an Apple-Silicon Mac (MPS); no API keys, no GPU cluster.
+# v1 — local, open-weight, one fresh process per model (Apple MPS), incremental JSONL
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
-./run_all.sh
+./run_all.sh                              # config in src/expconfig.py
+
+# v2 — capability-matched cross-family API run (OpenAI + Anthropic keys in .env)
+.venv/bin/pip install openai anthropic python-dotenv
+PYTHONPATH=src .venv/bin/python src/phase2_calibrate.py search 20   # difficulty/capability sweep
+PYTHONPATH=src .venv/bin/python src/phase2_run.py                   # cached, resumable; config in src/phase2config.py
+PYTHONPATH=src .venv/bin/python src/phase2_assemble.py              # -> run JSON + figures + report
 ```
 
-Run config (models, N, difficulty) lives in `src/expconfig.py`. **Do not** use the single-process `scratch/master.py` — it loads several models in one process and hangs MPS; `run_all.sh` is the working entry point and exists precisely because of that bug.
+Every API call is cached to disk by content hash (`results/cache/`), so a run is fully
+resumable and never re-billed. v1 models each run in their **own process** — loading several
+into one process corrupts the Apple-MPS pool and hangs. Run artifacts:
+[`results/runs/run_v1.json`](results/runs/run_v1.json),
+[`results/phase2/runs/run_v2_api.json`](results/phase2/runs/run_v2_api.json); calibration record
+in [`results/phase2/calibration.md`](results/phase2/calibration.md).
 
-## Reuse just the locator
+### Reuse just the locator
 
 ```python
-from arithmetic import generate_problem, corrupt_cot   # or bring your own Problem + CoT
+from arithmetic import generate_problem, corrupt_cot
 from error_locator import locate_canonical_index
 
 p = generate_problem(seed=1, n_steps=6)
@@ -84,30 +181,9 @@ idx, method = locate_canonical_index(p.render_cot(claimed), p)
 assert idx == truth.index    # -> 3   (method == 'strict' when the CoT aligns 1:1)
 ```
 
-## Layout
+## Status
 
-```
-src/error_locator.py   ★ mechanical error-step locator (strict + value-trace) — the reusable instrument
-src/arithmetic.py        auto-verifiable problem generator + GT + canonical CoT + error injector
-src/metrics.py           FER, SER, chance baseline, perplexity-controlled regression (bootstrap CIs)
-src/{phase_solve,phase_judge}.py   one-model-per-process data collection (clean MPS)
-src/assemble.py          merge phases -> run JSON -> figures + reports
-src/{plot,report,research_report}.py   figures, findings.md, RESEARCH_REPORT.md
-tests/test_backbone.py   the model-free gate: 25 tests incl. >1,200 corrupted-CoT round-trips
-run_all.sh / run_tests.sh   entry points     |     scratch/   exploratory dev scripts (not the entry point)
-```
-
-## Project status & commitment
-
-**This is active research, released early on purpose.** The protocol and the locator have certain, present value (a reproducible method; a reusable tool) regardless of whether the headline ever reaches POSITIVE — so they ship now, with their boundaries labelled honestly, rather than waiting on a stronger title.
-
-**I am continuing to develop this.** The next steps are public, not aspirational hand-waving — see [ROADMAP.md](ROADMAP.md) and open issue [#1](https://github.com/charlnoc/shared-blind-spot/issues/1):
-1. Harden the cross-family arm with a **capability-matched API judge** (the current cross judge is a weak arithmetic checker), and scale N for statistical power.
-2. Add **non-templated domains** (free-form word problems, unit-conversion chains) where perplexity actually varies, giving the familiarity control real purchase.
-3. Only on a positive, perplexity-robust SER: **representation-level (Layer-3)** confirmation on the open-weight models.
-
-Critique, replication, and "this is wrong because…" issues are explicitly welcome — that's what releasing the protocol is for. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Cite / reference
-
-If the locator or the protocol is useful, see [CITATION.cff](CITATION.cff). License: [MIT](LICENSE).
+Independent, preprint-stage research; **not peer-reviewed**. All numbers above come from the
+runs described and the committed run JSON / figures — included for inspection. Scrutiny,
+replication, and "this is wrong because…" issues are welcome (see
+[CONTRIBUTING.md](CONTRIBUTING.md)). License: [MIT](LICENSE) · cite: [CITATION.cff](CITATION.cff).

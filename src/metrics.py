@@ -106,6 +106,64 @@ def ser(records: list[dict], family: str) -> dict:
             "n_J_wrong_unlocalizable": j_unloc, "ser": p, "ci": (lo, hi)}
 
 
+def excess(records: list[dict], family: str) -> dict:
+    """Excess co-location for one arm: SER(family) - chance(family) (§5.5).
+    The per-arm decisive quantity; positive means above-chance shared errors."""
+    s = ser(records, family)
+    c = chance_baseline(records, family)
+    e = (s["ser"] - c["null"]) if not math.isnan(s["ser"]) else float("nan")
+    return {"family": family, "ser": s["ser"], "chance": c["null"],
+            "excess": e, "n_usable": s["n_usable"]}
+
+
+def excess_gap_bootstrap(records: list[dict], fam_same: str = "same",
+                         fam_cross: str = "cross", n_boot: int = 2000,
+                         seed: int = 0, return_gaps: bool = False) -> dict:
+    """THE decisive Phase-2 test, perplexity-free.
+
+    Resample whole problems (the shared unit — both judges see every problem)
+    with replacement; on each resample recompute excess(same) and excess(cross)
+    and their gap. Report the gap's bootstrap 95% CI and the one-sided fraction
+    of resamples with gap>0. This conditions correctly on every SER/chance
+    denominator because each resample recomputes them from scratch, and needs no
+    perplexity (uncomputable on the chat APIs).
+    """
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    base_s = excess(records, fam_same)
+    base_c = excess(records, fam_cross)
+    base_gap = (base_s["excess"] - base_c["excess"]
+                if not (math.isnan(base_s["excess"]) or math.isnan(base_c["excess"]))
+                else float("nan"))
+    n = len(records)
+    gaps, n_valid, n_pos = [], 0, 0
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, n)
+        samp = [records[j] for j in idx]
+        es = excess(samp, fam_same)["excess"]
+        ec = excess(samp, fam_cross)["excess"]
+        if math.isnan(es) or math.isnan(ec):
+            continue
+        g = es - ec
+        gaps.append(g)
+        n_valid += 1
+        n_pos += (g > 0)
+    gaps.sort()
+    if gaps:
+        lo = gaps[int(0.025 * len(gaps))]
+        hi = gaps[min(len(gaps) - 1, int(0.975 * len(gaps)))]
+    else:
+        lo = hi = float("nan")
+    out = {"excess_same": base_s["excess"], "excess_cross": base_c["excess"],
+           "gap": base_gap, "ci": (lo, hi),
+           "frac_gap_positive": (n_pos / n_valid) if n_valid else float("nan"),
+           "n_boot_valid": n_valid, "n_usable_same": base_s["n_usable"],
+           "n_usable_cross": base_c["n_usable"]}
+    if return_gaps:
+        out["gaps"] = gaps
+    return out
+
+
 def coverage(records: list[dict]) -> dict:
     """Localization coverage diagnostics (spec 'no silent caps')."""
     def rate(pred):

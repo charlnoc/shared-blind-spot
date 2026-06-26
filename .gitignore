@@ -15,8 +15,20 @@ venv/
 .cache/
 hf_cache/
 
-# Intermediate per-phase data (regenerable by ./run_all.sh).
-# The assembled run (results/runs/run_v1.json) and all figures/reports ARE
-# committed — they are the evidence behind the report.
+# Secrets — NEVER commit (API keys live here)
+.env
+
+# Local API-response cache: regenerable, and redundant with the committed run
+# JSON (which carries the full per-problem records). Cost-saving only.
+results/cache/
+
+# Intermediate per-phase data (regenerable). The assembled runs
+# (results/runs/run_v1.json, results/phase2/runs/run_v2_api*.json) and all
+# figures/reports ARE committed — they are the evidence behind the reports.
 results/runs/_*.jsonl
 results/runs/run_pilot.json
+results/phase2/runs/_*.jsonl
+
+# Raw run logs + scratch markers (curated .md deliverables are committed)
+results/phase2/*.log
+results/phase2/.dryrun*
