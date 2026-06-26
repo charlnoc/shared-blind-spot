@@ -7,6 +7,8 @@ authors:
     email: "charlcc07@gmail.com"
 date-released: "2026-06-26"
 license: MIT
+repository-code: "https://github.com/charlnoc/shared-blind-spot-vs-self-preference"
+url: "https://github.com/charlnoc/shared-blind-spot-vs-self-preference"
 keywords:
   - LLM-as-a-judge
   - self-preference bias

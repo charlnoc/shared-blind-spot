@@ -21,7 +21,7 @@ See [results/phase2/RESEARCH_REPORT_v2.md](results/phase2/RESEARCH_REPORT_v2.md)
 
 ## Done
 
-### ✓ Capability-matched cross-family API judge + more N — [issue #1](https://github.com/charlnoc/shared-blind-spot/issues/1)
+### ✓ Capability-matched cross-family API judge + more N — [issue #1](https://github.com/charlnoc/shared-blind-spot-vs-self-preference/issues/1)
 Completed in v2. Replaced the capability-confounded local cross judge with a genuinely
 cross-family, capability-matched API judge (Anthropic claude-haiku vs OpenAI gpt-4o), held
 everything else identical, and raised N to 500. Result: a clean **NULL** for the
