@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this method or the error-step locator, please cite it."
+title: "Shared Blind Spot vs Self-Preference: a method for separating shared reasoning failure from familiarity in LLM-as-a-judge"
+authors:
+  - family-names: "Ning"
+    given-names: "Charl"
+    email: "charlcc07@gmail.com"
+date-released: "2026-06-26"
+license: MIT
+keywords:
+  - LLM-as-a-judge
+  - self-preference bias
+  - chain-of-thought
+  - error localization
+  - evaluation
+abstract: >
+  A reproducible protocol and a mechanical, model-free error-step locator for
+  distinguishing two causes of same-family false endorsement in LLM judges:
+  surface familiarity (self-preference) versus a shared blind spot, where the
+  judge fails to catch an error because its own reasoning fails at the same step.
+  The protocol operationalises the split via a shared-error rate against a chance
+  baseline with a perplexity control; the locator re-executes reasoning steps
+  rather than asking an LLM, avoiding contamination by the bias under study.

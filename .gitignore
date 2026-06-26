@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual env (recreate from requirements.txt)
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# Hugging Face model cache (multi-GB, downloaded on first run)
+.cache/
+hf_cache/
+
+# Intermediate per-phase data (regenerable by ./run_all.sh).
+# The assembled run (results/runs/run_v1.json) and all figures/reports ARE
+# committed — they are the evidence behind the report.
+results/runs/_*.jsonl
+results/runs/run_pilot.json
